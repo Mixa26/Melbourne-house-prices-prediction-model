@@ -99,12 +99,31 @@ for i in [1500,2000,2500,3000,4500,5000]:
         lowest_i_for_nodes = i
 """
 #model = RandomForestRegressor(n_estimators = lowest_i_for_trees,max_leaf_nodes = 1500, random_state = 1)
-model = XGBRegressor(n_estimators = 500,learning_rate=0.005)
+
+def get_mae(i):
+    model = XGBRegressor(n_estimators=i,learning_rate=0.05)
+    pipeline = Pipeline(steps=[('preprocessor', preprocessing), ('model', model)])
+    pipeline.fit(train_X, train_y, model__early_stopping_rounds=5, model__eval_set=[(val_X, val_y)],
+                 model__verbose=False)
+    scores = -1 * cross_val_score(pipeline, test_X, test_y, cv=5, scoring='neg_mean_absolute_error')
+    return scores.mean()
+
+best_score = 1000000000
+
+for i in (500,1000,1500,2000,2500):
+    current = get_mae(i)
+    if current < best_score:
+        best_score = current
+
+print(best_score)
+"""    
+model = XGBRegressor(n_estimators = 1500,learning_rate=0.05)
 pipeline = Pipeline(steps=[('preprocessor', preprocessing),('model',model)])
 pipeline.fit(train_X,train_y,model__early_stopping_rounds=5,model__eval_set=[(val_X,val_y)],model__verbose=False)
 prediction = pipeline.predict(test_X)
 scores = -1 * cross_val_score(pipeline,test_X,test_y,cv=5,scoring='neg_mean_absolute_error')
+"""
 #prediction = pipeline.predict(test_X)
-print("Final model mean score:")
-print(scores.mean())
+#print("Final model mean score:")
+#print(scores.mean())
 #print(mean_absolute_error(test_y,prediction))
