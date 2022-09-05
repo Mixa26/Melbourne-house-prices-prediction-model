@@ -36,7 +36,7 @@ train_X, val_X, train_y, val_y = train_test_split(train_X,train_y,test_size=0.25
 categorical_cols = [col for col in train_X.columns if train_X[col].dtype == 'object']
 numerical_cols = [col for col in train_X.columns if col not in categorical_cols]
 
-numerical_transformer = SimpleImputer(strategy='constant')
+numerical_transformer = SimpleImputer(strategy='mean')
 
 categorical_transformer = Pipeline(steps=[
     ('imputer',SimpleImputer(strategy='most_frequent')),
@@ -101,7 +101,7 @@ for i in [1500,2000,2500,3000,4500,5000]:
 #model = RandomForestRegressor(n_estimators = lowest_i_for_trees,max_leaf_nodes = 1500, random_state = 1)
 
 def get_mae(i):
-    model = XGBRegressor(n_estimators=i,learning_rate=0.05)
+    model = XGBRegressor(n_estimators=i,learning_rate=0.005)
     pipeline = Pipeline(steps=[('preprocessor', preprocessing), ('model', model)])
     pipeline.fit(train_X, train_y, model__early_stopping_rounds=5, model__eval_set=[(val_X, val_y)],
                  model__verbose=False)
@@ -109,13 +109,19 @@ def get_mae(i):
     return scores.mean()
 
 best_score = 1000000000
+best_i = 6000
 
-for i in (500,1000,1500,2000,2500):
+get_mae(best_i)
+
+"""for i in (5000,6000,7000,8000,9000,10000):
     current = get_mae(i)
     if current < best_score:
+        print(current)
         best_score = current
+        best_i = i
 
 print(best_score)
+print(best_i)"""
 """    
 model = XGBRegressor(n_estimators = 1500,learning_rate=0.05)
 pipeline = Pipeline(steps=[('preprocessor', preprocessing),('model',model)])
