@@ -14,6 +14,8 @@ from sklearn.preprocessing import OneHotEncoder
 
 from sklearn.model_selection import cross_val_score
 
+from xgboost import XGBRegressor
+
 houses_full = pd.read_csv('houses\melb_data.csv')
 
 #houses_full.columns
@@ -25,7 +27,8 @@ features = ['Rooms','Bathroom','Distance','Landsize','Longtitude','Lattitude','C
 X = houses_full[features]
 y = houses_full.Price
 
-train_X, test_X, train_y, test_y = train_test_split(X,y,train_size=0.9,test_size=0.1)
+train_X, test_X, train_y, test_y = train_test_split(X,y,test_size=0.2,random_state=1)
+train_X, val_X, train_y, val_y = train_test_split(train_X,train_y,test_size=0.25,random_state=1)
 
 #making code cleaner with pipelines
 #imputting and encoding step
@@ -44,6 +47,10 @@ preprocessing = ColumnTransformer(transformers=[
     ('num', numerical_transformer, numerical_cols),
     ('cat', categorical_transformer, categorical_cols)
 ])
+
+eval_pipeline = Pipeline(steps=[('preprocessor',preprocessing)])
+eval_pipeline.fit(train_X,train_y)
+val_X = eval_pipeline.transform(val_X)
 
 #mae hopefully wont be worse than this
 lowest_mae_for_trees = 1000000
@@ -91,13 +98,12 @@ for i in [1500,2000,2500,3000,4500,5000]:
         lowest_mae_for_nodes = current
         lowest_i_for_nodes = i
 """
-model = RandomForestRegressor(n_estimators = lowest_i_for_trees,max_leaf_nodes = 1500, random_state = 1)
-pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessing),
-        ('model', model)
-    ])
-pipeline.fit(train_X,train_y)
-scores = cross_val_score(pipeline,test_X,test_y,cv=5)
+#model = RandomForestRegressor(n_estimators = lowest_i_for_trees,max_leaf_nodes = 1500, random_state = 1)
+model = XGBRegressor(n_estimators = 500,learning_rate=0.005)
+pipeline = Pipeline(steps=[('preprocessor', preprocessing),('model',model)])
+pipeline.fit(train_X,train_y,model__early_stopping_rounds=5,model__eval_set=[(val_X,val_y)],model__verbose=False)
+prediction = pipeline.predict(test_X)
+scores = -1 * cross_val_score(pipeline,test_X,test_y,cv=5,scoring='neg_mean_absolute_error')
 #prediction = pipeline.predict(test_X)
 print("Final model mean score:")
 print(scores.mean())
